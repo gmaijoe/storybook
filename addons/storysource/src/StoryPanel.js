@@ -129,7 +129,16 @@ export default class StoryPanel extends Component {
       currentLocation: { startLoc, endLoc },
     } = this.state;
     const highlightClassName = `css-${additionalStyles.name}`;
-    const newLineDecorations = editor.deltaDecorations(lineDecorations, [
+
+    // probably a bug in monaco editor.
+    // we will prevent the first highlighting from gluing in the editor
+    const allDecorations = lineDecorations.length
+      ? lineDecorations
+      : // eslint-disable-next-line no-underscore-dangle
+        Object.values(monaco.editor.getModels()[0]._decorationsTree)
+          .map(tree => tree.root.id)
+          .filter(id => id);
+    const newLineDecorations = editor.deltaDecorations(allDecorations, [
       {
         range: new monaco.Range(startLoc.line, startLoc.col + 1, endLoc.line, endLoc.col + 1),
         options: { isWholeLine: false, inlineClassName: highlightClassName },
