@@ -83,7 +83,7 @@ export default class StoryPanel extends Component {
     {
       changes: [
         {
-          range: { startLineNumber, endLineNumber },
+          range: { startLineNumber, endLineNumber, endColumn, startColumn },
           text,
         },
       ],
@@ -106,8 +106,8 @@ export default class StoryPanel extends Component {
       /* edge column not moving if change occuring above */
       newEndLocCol = endLocCol;
     } else if (startLineNumber === endLineNumber && text.indexOf('\n') === -1) {
-      /* new character typed */
-      newEndLocCol = endLocCol + text.length;
+      /* new character typed / removed */
+      newEndLocCol = endLocCol + text.length - (endColumn - startColumn);
     } else {
       /* the last line was probably merged with the previous one(s) */
       newEndLocCol = newSource.split('\n')[newEndLocLine - 1].length - 1;
