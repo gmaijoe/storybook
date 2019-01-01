@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 /** @jsx jsx */
 import { css, jsx } from '@emotion/core';
 import { Editor } from '@storybook/components';
-
+import { document } from 'global';
 import { SAVE_FILE_EVENT_ID, STORY_EVENT_ID } from './events';
 
 const getLocationKeys = locationsMap =>
@@ -168,6 +168,9 @@ export default class StoryPanel extends Component {
         onChange={this.updateSource}
         componentDidMount={this.editorDidMount}
         changePosition={this.changePosition}
+        resizeContainerReference={() =>
+          (document.getElementById('storybook-panel-root') || {}).parentNode
+        }
       />
     ) : null;
   };
