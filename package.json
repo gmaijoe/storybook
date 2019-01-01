@@ -127,6 +127,7 @@
     "remark-cli": "^6.0.0",
     "remark-lint": "^6.0.3",
     "remark-preset-lint-recommended": "^3.0.2",
+    "resize-observer-polyfill": "^1.5.1",
     "riot-jest-transformer": "^1.0.10",
     "shelljs": "^0.8.2",
     "svelte-jest": "^0.2.0",
