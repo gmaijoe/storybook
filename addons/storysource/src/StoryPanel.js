@@ -1,7 +1,8 @@
-import React, { Component } from 'react';
+import React, { Component } from 'react'; // eslint-disable-line no-unused-vars
 import PropTypes from 'prop-types';
+/** @jsx jsx */
+import { css, jsx } from '@emotion/core';
 import { Editor } from '@storybook/components';
-import { document } from 'global';
 
 import { SAVE_FILE_EVENT_ID, STORY_EVENT_ID } from './events';
 
@@ -13,7 +14,13 @@ const getLocationKeys = locationsMap =>
     : [];
 
 export default class StoryPanel extends Component {
-  state = { source: '// 🦄 Looking for it, hold on tight', lineDecorations: [] };
+  state = {
+    source: '// 🦄 Looking for it, hold on tight',
+    lineDecorations: [],
+    additionalStyles: css`
+      background-color: #c6ff0040;
+    `,
+  };
 
   componentDidMount() {
     const { channel } = this.props;
@@ -71,50 +78,61 @@ export default class StoryPanel extends Component {
     });
   };
 
-  updateSource = ({ newSource }) => {
+  updateSource = (
+    newSource,
+    {
+      changes: [
+        {
+          range: { startLineNumber, endLineNumber },
+          text,
+        },
+      ],
+    }
+  ) => {
     const {
-      source,
       currentLocation: {
         startLoc: { line: startLocLine, col: startLocCol },
         endLoc: { line: endLocLine, col: endLocCol },
       },
     } = this.state;
-    const sourceLines = source.split('\n');
-    const newFileSource =
-      sourceLines.slice(0, Math.max(0, startLocLine - 1)).join('\n') +
-      (startLocLine === 0 ? '' : '\n') +
-      sourceLines[startLocLine - 1].substring(0, startLocCol) +
-      newSource.substring(startLocCol, newSource.lastIndexOf(')') + 1) +
-      (newSource.endsWith('\n') ? '\n' : '') +
-      sourceLines[endLocLine - 1].substring(endLocCol + 1) +
-      sourceLines.slice(Math.min(sourceLines.length - 1, endLocLine)).join('\n');
 
-    const newEndLocLine = startLocLine + newSource.split('\n').length - 1;
-    const newEndLocCol = newSource.split('\n').slice(-1).length;
+    const newEndLocLine =
+      endLocLine -
+      (endLineNumber - startLineNumber) /* selection range cut */ +
+      text.split('').filter(x => x === '\n')
+        .length; /* all the line feeds in the replacement text */
+    let newEndLocCol;
+    if (endLineNumber < endLocLine) {
+      /* edge column not moving if change occuring above */
+      newEndLocCol = endLocCol;
+    } else if (startLineNumber === endLineNumber && text.indexOf('\n') === -1) {
+      /* new character typed */
+      newEndLocCol = endLocCol + text.length;
+    } else {
+      /* the last line was probably merged with the previous one(s) */
+      newEndLocCol = newSource.split('\n')[newEndLocLine - 1].length - 1;
+    }
 
     this.setState({
-      source: newFileSource,
+      source: newSource,
       currentLocation: {
-        startLoc: { col: startLocCol, line: startLocLine },
-        endLoc: { col: newEndLocCol, line: newEndLocLine },
+        startLoc: { line: startLocLine, col: startLocCol },
+        endLoc: { line: newEndLocLine, col: newEndLocCol },
       },
     });
   };
 
   changePosition = (e, editor, monaco) => {
     const {
+      additionalStyles,
       lineDecorations,
       currentLocation: { startLoc, endLoc },
     } = this.state;
-
-    if (!lineDecorations.length) {
-      const styleSheet = Array.from(document.styleSheets).slice(-1)[0];
-      styleSheet.insertRule('.editableLine{background-color: #c6ff0040;}', 0);
-    }
+    const highlightClassName = `css-${additionalStyles.name}`;
     const newLineDecorations = editor.deltaDecorations(lineDecorations, [
       {
-        range: new monaco.Range(startLoc.line, startLoc.col, endLoc.line, endLoc.col),
-        options: { isWholeLine: false, inlineClassName: 'editableLine' },
+        range: new monaco.Range(startLoc.line, startLoc.col + 1, endLoc.line, endLoc.col + 1),
+        options: { isWholeLine: false, inlineClassName: highlightClassName },
       },
     ]);
 
@@ -128,11 +146,11 @@ export default class StoryPanel extends Component {
       });
     if (
       e.position.lineNumber > endLoc.line ||
-      (e.position.lineNumber === endLoc.line && e.position.column > endLoc.col)
+      (e.position.lineNumber === endLoc.line && e.position.column > endLoc.col + 1)
     )
       editor.setPosition({
         lineNumber: endLoc.line,
-        column: endLoc.col,
+        column: endLoc.col + 1,
       });
 
     if (newLineDecorations[0] !== lineDecorations[0])
@@ -141,11 +159,13 @@ export default class StoryPanel extends Component {
 
   render = () => {
     const { active } = this.props;
-    const { source } = this.state;
+    const { source, additionalStyles } = this.state;
 
     return active ? (
       <Editor
+        css={additionalStyles}
         source={source}
+        onChange={this.updateSource}
         componentDidMount={this.editorDidMount}
         changePosition={this.changePosition}
       />
