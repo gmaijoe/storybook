@@ -78,6 +78,16 @@ export default class StoryPanel extends Component {
     });
   };
 
+  onStoryRendered = (editor, monaco) => {
+    const {
+      currentLocation: {
+        startLoc: { line: startLocLine },
+      },
+    } = this.state;
+    editor._revealLine(startLocLine);
+    editor._modelData.view._actualRender();
+  }
+
   updateSource = (
     newSource,
     {
@@ -167,7 +177,7 @@ export default class StoryPanel extends Component {
   };
 
   render = () => {
-    const { active } = this.props;
+    const { channel, active } = this.props;
     const { source, additionalStyles } = this.state;
 
     return active ? (
@@ -177,6 +187,8 @@ export default class StoryPanel extends Component {
         onChange={this.updateSource}
         componentDidMount={this.editorDidMount}
         changePosition={this.changePosition}
+        onStoryRendered={this.onStoryRendered}
+        channel={channel}
         resizeContainerReference={() =>
           (document.getElementById('storybook-panel-root') || {}).parentNode
         }
