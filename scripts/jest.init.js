@@ -22,19 +22,23 @@ global.localStorage = localStorageMock;
 configure({ adapter: new Adapter() });
 
 /* Fail tests on PropType warnings
- This allows us to throw an error in tests environments when there are prop-type warnings. This should keep the tests
- free of warnings going forward.
+ This allows us to throw an error in tests environments when there are prop-type warnings.
+ This should keep the tests free of warnings going forward.
  */
 
-const ignoredWarnings = [
-  'The pseudo class ":nth-child" is potentially unsafe when doing server-side rendering. Try changing it to "nth-of-type"',
+const ignoreList = [
+  error => error.message.includes('":first-child" is potentially unsafe'),
+  error => error.message.includes('Failed prop type') && error.stack.includes('storyshots'),
 ];
 
-const throwError = message => {
-  if (!ignoredWarnings.find(warning => message === warning)) {
-    throw new Error(message);
+const throwMessage = (type, message) => {
+  const error = new Error(`${type}${message}`);
+  if (!ignoreList.reduce((acc, item) => acc || item(error), false)) {
+    throw error;
   }
 };
+const throwWarning = message => throwMessage('warn: ', message);
+const throwError = message => throwMessage('error: ', message);
 
 global.console.error = throwError;
-global.console.warn = throwError;
+global.console.warn = throwWarning;
